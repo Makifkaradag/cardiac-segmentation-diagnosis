@@ -17,58 +17,87 @@ An end-to-end pipeline that takes short-axis cardiac cine-MRI scans, segments th
 
 ---
 
-## What Is This Problem and Why Does It Matter?
+## Results and Metrics
 
-When a cardiologist assesses heart health from an MRI, they look at how well the heart pumps blood and whether the muscle walls are unusually thick, thin, or stretched out. 
+All evaluation numbers below come from testing on holdout patient data using a 3D fullres nnU-Net v2 model (`nnUNetTrainer_250epochs`, fold 0).
 
-To measure this accurately, a specialist has to manually draw contours around the heart chambers slice by slice. Doing this by hand for a single patient often takes 20 to 30 minutes of painstaking contouring. If you have dozens of patients a day, it creates a massive clinical bottleneck.
+### 1. Segmentation Quality (Dice Score)
 
-This project automates that entire process:
-1. Reads raw cine MRI volumes.
-2. Segments the heart chambers and muscle in 3D with high precision.
-3. Automatically computes key clinical numbers (ejection fraction, volumes, myocardial mass).
-4. Predicts the cardiac diagnosis from those clinical numbers.
+| Structure | Anatomical Region | Mean Dice Score |
+| :--- | :--- | :---: |
+| **LV** | Left Ventricle Cavity | **0.945** |
+| **RV** | Right Ventricle Cavity | **0.911** |
+| **MYO** | Myocardium Wall | **0.900** |
+
+![Per-structure Dice](assets/stats_dice_summary.png)
+*Figure 3: Mean Dice score across all holdout cases.*
+
+The LV cavity is the easiest to segment because of the sharp contrast between the dark blood pool and surrounding heart tissue. The myocardium is a thin ring, so even small border variations lower its Dice score slightly, yet it consistently reaches a dependable 0.900.
+
+### 2. Clinical Metric Accuracy (Ground Truth vs. Predictions)
+
+Instead of just checking whether pixels overlap, we calculate actual clinical biomarkers directly from the predicted masks and compare them to measurements made from expert manual contours:
+
+| Clinical Metric | Mean Absolute Error (MAE) | Pearson Correlation (r) |
+| :--- | :---: | :---: |
+| **LV Ejection Fraction (%)** | **2.31** | **0.990** |
+| **RV Ejection Fraction (%)** | **5.17** | **0.889** |
+| **Myocardial Mass (g)** | **7.46** | **0.982** |
+
+An MAE of 2.31% on ejection fraction and a Pearson correlation of 0.990 means the automated segmentation can be trusted for clinical decision support.
+
+### 3. Diagnosis Classification Performance
+
+A Random Forest classifier uses 9 clinical volumetric features (ventricular volumes, ejection fractions, mass, and height-indexed values) to classify the patient into one of 5 diagnostic groups.
+
+#### 5-Fold Stratified Cross-Validation (100 Patients, GT Features)
+
+**Overall Accuracy: 0.880 (88.0%)**
+
+```text
+              precision    recall  f1-score   support
+
+         DCM       0.95      0.95      0.95        20
+         HCM       1.00      0.80      0.89        20
+        MINF       0.90      0.95      0.93        20
+         NOR       0.72      0.90      0.80        20
+          RV       0.89      0.80      0.84        20
+
+    accuracy                           0.88       100
+   macro avg       0.89      0.88      0.88       100
+weighted avg       0.89      0.88      0.88       100
+```
+
+#### Holdout End-to-End Evaluation (50 Patients, Features from Predicted Masks)
+
+In this setting, zero ground truth is used anywhere: raw MRI $\rightarrow$ 3D predicted mask $\rightarrow$ derived clinical features $\rightarrow$ predicted diagnosis.
+
+**End-to-End Accuracy: 0.860 (86.0%)**
+
+| Pathology Class | Precision | Recall | F1-Score | Support |
+| :--- | :---: | :---: | :---: | :---: |
+| **DCM** (Dilated Cardiomyopathy) | 0.70 | 0.70 | 0.70 | 10 |
+| **HCM** (Hypertrophic Cardiomyopathy) | 1.00 | 0.90 | 0.95 | 10 |
+| **MINF** (Myocardial Infarction) | 0.70 | 0.70 | 0.70 | 10 |
+| **NOR** (Normal) | 0.91 | 1.00 | 0.95 | 10 |
+| **RV** (Abnormal Right Ventricle) | 1.00 | 1.00 | 1.00 | 10 |
 
 ---
 
-## The Data and Imaging: What Are We Looking At?
+## How to Test the Models on Your Own Data (CPU or GPU)
 
-The dataset comes from the **ACDC (Automated Cardiac Diagnosis Challenge)**:
+Anyone can test this pipeline directly on their own data. The test script automatically formats your input MRI, runs on your available hardware (CUDA GPU if present, otherwise CPU), extracts clinical metrics, and outputs the predicted diagnosis.
 
-- **Short-Axis Cine MRI**: Think of this like slicing a loaf of bread from top to bottom. The scanner takes cross-sectional slices through the heart from its base down to the apex. Because the heart is beating, cine MRI records a full loop of the cardiac cycle for each slice.
-- **Two Critical Moments (ED and ES)**:
-  - **End-Diastole (ED)**: The moment the heart finishes relaxing and fills completely with blood. The ventricles are at their largest volume (EDV).
-  - **End-Systole (ES)**: The moment the heart finishes contracting and pumps blood out into the body. The ventricles are at their smallest volume (ESV).
-- **The Three Segmented Structures**:
-  - **Left Ventricle Cavity (LV)**: The main pump supplying oxygenated blood to the body.
-  - **Myocardium (MYO)**: The muscular heart wall surrounding the LV.
-  - **Right Ventricle Cavity (RV)**: The thinner, crescent-shaped chamber pumping blood to the lungs.
-- **5 Diagnostic Classes** (20 training patients each, perfectly balanced):
-  - **NOR**: Normal healthy heart.
-  - **MINF**: Previous myocardial infarction (heart attack damage, reduced pumping power, localized wall thinning).
-  - **DCM**: Dilated cardiomyopathy (stretched, enlarged LV chamber with poor ejection fraction).
-  - **HCM**: Hypertrophic cardiomyopathy (abnormally thick heart muscle, hyper-contractile).
-  - **RV**: Abnormal right ventricle (dilated or dysfunctional RV).
-
----
-
-## Pre-trained Models
+### 1. Download Pre-trained Models
 
 Trained model checkpoints are available on Google Drive:
-
-- **Download Folder**: [ACDC Pre-trained Models on Google Drive](https://drive.google.com/drive/folders/1NN6Qx6nsP55il4r6kfiiKTL7QwS26nWX?usp=sharing)
+- **Download Link**: [ACDC Pre-trained Models on Google Drive](https://drive.google.com/drive/folders/1NN6Qx6nsP55il4r6kfiiKTL7QwS26nWX?usp=sharing)
 
 This folder includes:
 - `checkpoint_best.pth` and configuration files for the 3D fullres nnU-Net v2 model.
 - `cardiac_rf_model.pkl` for the 5-class diagnosis classifier.
 
----
-
-## Test the Models on Your Own Data (CPU or GPU)
-
-Anyone can test this pipeline directly on their own data. The script automatically formats the input MRI, runs on your available hardware (CUDA GPU if present, otherwise CPU), extracts clinical metrics, and outputs the predicted diagnosis.
-
-### 1. Installation
+### 2. Installation
 
 ```bash
 git clone https://github.com/Makifkaradag/cardiac-segmentation-diagnosis.git
@@ -76,12 +105,12 @@ cd cardiac-segmentation-diagnosis
 pip install -r requirements.txt
 ```
 
-### 2. Run Inference on a Patient
+### 3. Run Inference on a Patient
 
 If you have a patient folder containing the ED and ES NIfTI files:
 
 ```bash
-# Auto-detects GPU or CPU automatically
+# Automatically detects GPU or CPU
 python test_pipeline.py --patient-dir /path/to/patient_folder --model-dir /path/to/downloaded_weights
 ```
 
@@ -128,58 +157,38 @@ If `--visualize` is enabled, it also writes a clean PNG overlay showing your raw
 
 ---
 
-## Results and Metrics
+## What Is This Problem and Why Does It Matter?
 
-All numbers below were evaluated on holdout data using `3d_fullres` nnU-Net v2 (`nnUNetTrainer_250epochs`, fold 0).
+When a cardiologist assesses heart health from an MRI, they look at how well the heart pumps blood and whether the muscle walls are unusually thick, thin, or stretched out. 
 
-### 1. Segmentation Quality (Dice Score)
+To measure this accurately, a specialist has to manually draw contours around the heart chambers slice by slice. Doing this by hand for a single patient often takes 20 to 30 minutes of painstaking contouring. If you have dozens of patients a day, it creates a massive clinical bottleneck.
 
-| Structure | Anatomical Region | Mean Dice Score |
-| :--- | :--- | :---: |
-| **LV** | Left Ventricle Cavity | **0.945** |
-| **RV** | Right Ventricle Cavity | **0.911** |
-| **MYO** | Myocardium Wall | **0.900** |
+This project automates that entire process:
+1. Reads raw cine MRI volumes.
+2. Segments the heart chambers and muscle in 3D with high precision.
+3. Automatically computes key clinical numbers (ejection fraction, volumes, myocardial mass).
+4. Predicts the cardiac diagnosis from those clinical numbers.
 
-![Per-structure Dice](assets/stats_dice_summary.png)
-*Figure 3: Mean Dice score across all holdout cases.*
+---
 
-The LV cavity is the easiest to segment because of high contrast between dark blood pool and surrounding tissue. The myocardium is a relatively thin ring, so small border variations lower its Dice slightly, yet it consistently reaches 0.900.
+## The Data and Imaging: What Are We Looking At?
 
-### 2. Clinical Metric Accuracy (Ground Truth vs. Predictions)
+The dataset comes from the **ACDC (Automated Cardiac Diagnosis Challenge)**:
 
-Instead of just checking whether pixels overlap, we calculate actual clinical biomarkers directly from the predicted masks and compare them to measurements made from expert manual contours:
-
-| Clinical Metric | Mean Absolute Error (MAE) | Pearson Correlation (r) |
-| :--- | :---: | :---: |
-| **LV Ejection Fraction (%)** | **2.31** | **0.990** |
-| **RV Ejection Fraction (%)** | **5.17** | **0.889** |
-| **Myocardial Mass (g)** | **7.46** | **0.982** |
-
-An MAE of 2.31% on ejection fraction and a Pearson correlation of 0.990 means the automated segmentation can be trusted for clinical decision support.
-
-### 3. Diagnosis Classification (5-Fold Cross-Validation)
-
-A Random Forest classifier uses 9 clinical volumetric features (ventricular volumes, ejection fractions, mass, and height-indexed values) to classify the patient.
-
-**5-Fold Cross-Validation Accuracy: 0.880 (88.0%)**
-
-```text
-              precision    recall  f1-score   support
-
-         DCM       0.95      0.95      0.95        20
-         HCM       1.00      0.80      0.89        20
-        MINF       0.90      0.95      0.93        20
-         NOR       0.72      0.90      0.80        20
-          RV       0.89      0.80      0.84        20
-
-    accuracy                           0.88       100
-   macro avg       0.89      0.88      0.88       100
-weighted avg       0.89      0.88      0.88       100
-```
-
-**End-to-End Holdout Accuracy: 0.860 (86.0%)**
-
-When tested completely end-to-end on 50 unseen holdout patients where features come purely from the model's own predicted masks (zero ground truth involved), accuracy remains high at 86.0%.
+- **Short-Axis Cine MRI**: Think of this like slicing a loaf of bread from top to bottom. The scanner takes cross-sectional slices through the heart from its base down to the apex. Because the heart is beating, cine MRI records a full loop of the cardiac cycle for each slice.
+- **Two Critical Moments (ED and ES)**:
+  - **End-Diastole (ED)**: The moment the heart finishes relaxing and fills completely with blood. The ventricles are at their largest volume (EDV).
+  - **End-Systole (ES)**: The moment the heart finishes contracting and pumps blood out into the body. The ventricles are at their smallest volume (ESV).
+- **The Three Segmented Structures**:
+  - **Left Ventricle Cavity (LV)**: The main pump supplying oxygenated blood to the body.
+  - **Myocardium (MYO)**: The muscular heart wall surrounding the LV.
+  - **Right Ventricle Cavity (RV)**: The thinner, crescent-shaped chamber pumping blood to the lungs.
+- **5 Diagnostic Classes** (20 training patients each, perfectly balanced):
+  - **NOR**: Normal healthy heart.
+  - **MINF**: Previous myocardial infarction (heart attack damage, reduced pumping power, localized wall thinning).
+  - **DCM**: Dilated cardiomyopathy (stretched, enlarged LV chamber with poor ejection fraction).
+  - **HCM**: Hypertrophic cardiomyopathy (abnormally thick heart muscle, hyper-contractile).
+  - **RV**: Abnormal right ventricle (dilated or dysfunctional RV).
 
 ---
 
