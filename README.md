@@ -21,7 +21,7 @@ An end-to-end pipeline that takes short-axis cardiac cine-MRI scans, segments th
 
 ---
 
-## 1. Results and Metrics
+## Results and Metrics
 
 All evaluation numbers below come from testing on holdout patient data using a 3D fullres nnU-Net v2 model (`nnUNetTrainer_250epochs`, fold 0).
 
@@ -93,7 +93,7 @@ In this setting, zero ground truth is used anywhere: raw MRI $\rightarrow$ 3D pr
 
 ---
 
-## 2. What Is This Problem and Why Does It Matter?
+## What Is This Problem and Why Does It Matter?
 
 When a cardiologist assesses heart health from an MRI, they look at how well the heart pumps blood and whether the muscle walls are unusually thick, thin, or stretched out. 
 
@@ -126,7 +126,7 @@ The dataset comes from the **ACDC (Automated Cardiac Diagnosis Challenge)**:
 
 ---
 
-## 3. How to Test the Models on Your Own Data (CPU or GPU)
+## How to Test the Models on Your Own Data (CPU or GPU)
 
 Anyone can test this pipeline directly on their own data. The test script automatically formats your input MRI, runs on your available hardware (CUDA GPU if present, otherwise CPU), extracts clinical metrics, and outputs the predicted diagnosis.
 
@@ -199,46 +199,7 @@ If `--visualize` is enabled, it also writes a clean PNG overlay showing your raw
 
 ---
 
-## 4. Repository Structure
-
-```text
-cardiac-segmentation-diagnosis/
-├── assets/                           # Figures, animations, and summary charts
-│   ├── case_photo_patient117_ES.png  # Representative 3-panel comparison still
-│   ├── slice_grid_patient101_ED.gif  # Animated slice loop (ED)
-│   ├── slice_grid_patient101_ES.gif  # Animated slice loop (ES)
-│   └── stats_dice_summary.png        # Segmentation Dice bar plot
-├── src/                              # Core Python library
-│   ├── __init__.py
-│   ├── config.py                     # Labels, clinical constants, colors
-│   ├── data/
-│   │   ├── parser.py                 # Info.cfg metadata parsing
-│   │   ├── io.py                     # NIfTI file readers and writers
-│   │   └── nnunet_converter.py       # Dataset converter for nnU-Net v2
-│   ├── metrics/
-│   │   ├── segmentation.py           # 3D Sorensen-Dice calculation
-│   │   └── clinical.py               # Volumetric calculation, EF, mass
-│   ├── models/
-│   │   ├── classifier.py             # Random Forest 5-fold CV & training
-│   │   └── inference.py              # CPU/GPU inference runner
-│   └── visualization/
-│       └── plotting.py               # Medical overlays and GIF generators
-├── scripts/                          # Pipeline utility CLI scripts
-│   ├── prepare_nnunet_data.py        # Converts raw ACDC dataset to nnUNet raw
-│   ├── evaluate_segmentation.py      # Dice evaluation CLI
-│   ├── train_classifier.py           # Feature extraction & 5-fold CV CLI
-│   ├── evaluate_end_to_end.py        # End-to-end holdout validation CLI
-│   ├── generate_visualizations.py    # Figure and GIF creation CLI
-│   └── test_pipeline.py              # Mirror of test runner
-├── test_pipeline.py                  # Direct entry point for testing new patients
-├── requirements.txt                  # Python dependencies
-├── LICENSE                           # MIT License
-└── README.md
-```
-
----
-
-## 5. Full Pipeline Training Workflow
+## Full Pipeline Training Workflow
 
 If you want to train from scratch on the original ACDC dataset:
 
