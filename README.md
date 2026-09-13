@@ -11,8 +11,12 @@ An end-to-end pipeline that takes short-axis cardiac cine-MRI scans, segments th
 *Figure 1: Original cine MRI, ground truth annotations, and 3D nnU-Net prediction for patient 117 at end-systole (ES). Red = Right Ventricle (RV), Yellow = Myocardium (MYO), Blue = Left Ventricle (LV).*
 
 <div align="center">
-  <img src="assets/slice_grid_patient101_ED.gif" width="72%" alt="Slice-by-slice cardiac MRI traversal" />
-  <p><em>Figure 2: Slice-by-slice volume traversal showing MRI cross-sections from heart base to apex.</em></p>
+  <h3>End-Diastole (ED) Phase — Full 3D Volumetric Traversal</h3>
+  <img src="assets/slice_grid_patient101_ED.gif" width="96%" alt="End-Diastole Slice-by-slice cardiac MRI traversal" />
+  <br/><br/>
+  <h3>End-Systole (ES) Phase — Full 3D Volumetric Traversal</h3>
+  <img src="assets/slice_grid_patient101_ES.gif" width="96%" alt="End-Systole Slice-by-slice cardiac MRI traversal" />
+  <p><em>Figure 2: Animated slice-by-slice volumetric loops (Patient 101) comparing raw cine MRI against expert ground truth and 3D nnU-Net predictions across both End-Diastole and End-Systole cardiac phases.</em></p>
 </div>
 
 ---
@@ -55,18 +59,9 @@ A Random Forest classifier uses 9 clinical volumetric features (ventricular volu
 **Overall Accuracy: 0.880 (88.0%)**
 
 <div align="center">
-  <img src="assets/stats_classification_cv.png" width="55%" alt="5-Fold Cross-Validation Confusion Matrix" />
+  <img src="assets/stats_classification_cv.png" width="65%" alt="5-Fold Cross-Validation Confusion Matrix" />
   <p><em>Figure 4: Confusion matrix across 5-fold cross-validation (100 patients, 20 per class).</em></p>
 </div>
-
-| True \ Predicted | DCM | HCM | MINF | NOR | RV | Support | Recall |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **DCM** | **19** | 0 | 1 | 0 | 0 | 20 | 0.95 |
-| **HCM** | 0 | **16** | 0 | 4 | 0 | 20 | 0.80 |
-| **MINF** | 1 | 0 | **19** | 0 | 0 | 20 | 0.95 |
-| **NOR** | 0 | 0 | 0 | **18** | 2 | 20 | 0.90 |
-| **RV** | 0 | 0 | 1 | 3 | **16** | 20 | 0.80 |
-| **Precision** | 0.95 | 1.00 | 0.90 | 0.72 | 0.89 | Total: 100 | **Acc: 0.88** |
 
 ```text
               precision    recall  f1-score   support
