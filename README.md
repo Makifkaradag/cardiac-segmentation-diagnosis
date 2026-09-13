@@ -25,18 +25,21 @@ An end-to-end pipeline that takes short-axis cardiac cine-MRI scans, segments th
 
 All evaluation numbers below come from testing on holdout patient data using a 3D fullres nnU-Net v2 model (`nnUNetTrainer_250epochs`, fold 0).
 
-### Segmentation Quality (Dice Score)
+### Segmentation Quality (Dice & HD95 Boundary Distance)
 
-| Structure | Anatomical Region | Mean Dice Score |
-| :--- | :--- | :---: |
-| **LV** | Left Ventricle Cavity | **0.945** |
-| **RV** | Right Ventricle Cavity | **0.911** |
-| **MYO** | Myocardium Wall | **0.900** |
+All evaluation numbers below come from testing on 50 holdout patients (100 3D volumetric scans across both ED and ES phases):
+
+| Structure | Anatomical Region | Dice Score (Mean ± SD) | HD95 (Mean ± SD) |
+| :--- | :--- | :---: | :---: |
+| **LV** | Left Ventricle Cavity | **0.945 ± 0.043** | **3.56 ± 6.23 mm** |
+| **RV** | Right Ventricle Cavity | **0.911 ± 0.057** | **4.64 ± 3.58 mm** |
+| **MYO** | Myocardium Wall | **0.900 ± 0.030** | **2.55 ± 2.30 mm** |
+| **OVERALL** | **All 3 Structures** | **0.919** | **3.58 mm** |
 
 ![Per-structure Dice](assets/stats_dice_summary.png)
 *Figure 3: Mean Dice score across all holdout cases.*
 
-The LV cavity is the easiest to segment because of the sharp contrast between the dark blood pool and surrounding heart tissue. The myocardium is a thin ring, so even small border variations lower its Dice score slightly, yet it consistently reaches a dependable 0.900.
+The LV cavity achieves high volumetric overlap due to strong blood pool contrast. Crucially, the myocardium wall maintains an exceptionally sharp boundary distance of **2.55 mm HD95**, demonstrating accurate contouring without boundary leakage despite thin-walled anatomy.
 
 ### Clinical Metric Accuracy (Ground Truth vs. Predictions)
 
@@ -48,7 +51,7 @@ Instead of just checking whether pixels overlap, we calculate actual clinical bi
 | **RV Ejection Fraction (%)** | **5.17** | **0.889** |
 | **Myocardial Mass (g)** | **7.46** | **0.982** |
 
-An MAE of 2.31% on ejection fraction and a Pearson correlation of 0.990 means the automated segmentation can be trusted for clinical decision support.
+An MAE of 2.31% on ejection fraction and a Pearson correlation of 0.990 demonstrates strong agreement with expert-derived clinical measurements.
 
 ### Diagnosis Classification Performance
 
@@ -117,7 +120,7 @@ The dataset comes from the **ACDC (Automated Cardiac Diagnosis Challenge)**:
   - **Left Ventricle Cavity (LV)**: The main pump supplying oxygenated blood to the body.
   - **Myocardium (MYO)**: The muscular heart wall surrounding the LV.
   - **Right Ventricle Cavity (RV)**: The thinner, crescent-shaped chamber pumping blood to the lungs.
-- **5 Diagnostic Classes** (20 training patients each, perfectly balanced):
+- **Diagnostic Categories** (100 labeled ACDC patients balanced across five diagnostic categories):
   - **NOR**: Normal healthy heart.
   - **MINF**: Previous myocardial infarction (heart attack damage, reduced pumping power, localized wall thinning).
   - **DCM**: Dilated cardiomyopathy (stretched, enlarged LV chamber with poor ejection fraction).
